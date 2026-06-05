@@ -859,8 +859,8 @@ function init(){
   document.getElementById('sbName').textContent=state.settings.business_name;
   const savedPage=localStorage.getItem('currentPage')||'dashboard';
   currentPage=savedPage;
+  navigateTo(savedPage);
   if(sb)loadFromSupabase();
-  else{navigateTo(savedPage);}
 }
 init();
 </script>
