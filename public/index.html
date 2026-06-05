@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonny Jones H&S — Lead Tracker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.3.0/dist/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy:#0f1f3d;--navy-mid:#1a3260;--blue:#1e6bbd;--blue-b:#2e80d8;--blue-l:#e8f2fc;
+  --green:#1D9E75;--green-l:#e6f7f1;--red:#e24b4a;--red-l:#fceaea;
+  --amber:#f59e0b;--amber-l:#fef3c7;--white:#fff;--bg:#f4f6fb;--bg2:#eef1f8;
+  --border:#dde3ef;--border2:#c8d0e4;--text:#0f1f3d;--text2:#4a5a7a;--text3:#8a97b5;
+  --sidebar-w:224px;--sidebar-collapsed:60px;--topbar-h:58px;
+  --radius:10px;--radius-lg:14px;
+  --shadow:0 2px 8px rgba(15,31,61,.1),0 1px 3px rgba(15,31,61,.07);
+  --shadow-sm:0 1px 3px rgba(15,31,61,.07),0 1px 2px rgba(15,31,61,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;font-size:14px}
+
+#sidebar{width:var(--sidebar-w);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;height:100vh;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:visible;position:relative;z-index:20}
+#sidebar.collapsed{width:var(--sidebar-collapsed)}
+.sb-top{padding:14px 12px 12px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;min-height:72px}
+.sb-logo-wrap{flex-shrink:0;width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.1);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.sb-logo-wrap img{width:100%;height:100%;object-fit:contain}
+.sb-logo-wrap i{font-size:20px;color:rgba(255,255,255,.7)}
+.sb-brand{min-width:0;overflow:hidden;white-space:nowrap;opacity:1;transition:opacity .15s}
+#sidebar.collapsed .sb-brand{opacity:0;pointer-events:none}
+.sb-name{font-size:12px;font-weight:600;color:#fff;line-height:1.3;overflow:hidden;text-overflow:ellipsis}
+.sb-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
+.sb-toggle{position:absolute;top:50%;right:-12px;transform:translateY(-50%);width:24px;height:24px;background:var(--blue);border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:30;transition:transform .22s}
+.sb-toggle i{font-size:13px;transition:transform .22s}
+#sidebar.collapsed .sb-toggle i{transform:rotate(180deg)}
+.sb-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 0;display:flex;flex-direction:column}
+.sb-section{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.28);padding:12px 16px 5px;white-space:nowrap;overflow:hidden;transition:opacity .15s}
+#sidebar.collapsed .sb-section{opacity:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:12.5px;font-weight:400;color:rgba(255,255,255,.58);cursor:pointer;border-left:2px solid transparent;transition:all .14s;white-space:nowrap;overflow:hidden;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9)}
+.nav-item.active{background:rgba(30,107,189,.3);color:#fff;font-weight:500;border-left-color:var(--blue-b)}
+.nav-item i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center}
+.nav-label{overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
+#sidebar.collapsed .nav-label{opacity:0}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;flex-shrink:0;transition:opacity .15s}
+#sidebar.collapsed .nav-badge{opacity:0}
+.sb-bottom{border-top:1px solid rgba(255,255,255,.08);padding:6px 0}
+
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:var(--topbar-h);background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:12px;flex-shrink:0;box-shadow:0 1px 0 var(--border)}
+.topbar-title{font-size:16px;font-weight:600;color:var(--text);flex:1}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:12.5px;font-weight:500;font-family:'Poppins',sans-serif;border-radius:var(--radius);border:1px solid var(--border2);background:var(--white);color:var(--text2);cursor:pointer;transition:all .14s;line-height:1}
+.btn:hover{background:var(--bg);border-color:var(--blue);color:var(--blue)}
+.btn i{font-size:15px}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-b);border-color:var(--blue-b);color:#fff}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn-danger{background:var(--red-l);color:var(--red);border-color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-success{background:var(--green-l);color:var(--green);border-color:var(--green)}
+.btn-success:hover{background:var(--green);color:#fff}
+.toggle-group{display:flex;background:var(--bg2);border-radius:var(--radius);padding:3px;border:1px solid var(--border)}
+.tgl-btn{padding:5px 11px;font-size:12px;font-weight:500;border-radius:7px;border:none;background:transparent;color:var(--text3);cursor:pointer;transition:all .14s;display:flex;align-items:center;gap:4px;font-family:'Poppins',sans-serif}
+.tgl-btn.active{background:var(--white);color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tgl-btn i{font-size:14px}
+
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.page{display:none;height:100%;flex-direction:column;overflow:hidden}
+.page.active{display:flex}
+
+.dash-scroll{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:20px}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:13px}
+.kpi-card{background:var(--white);border-radius:var(--radius-lg);padding:18px 18px 14px;box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative;overflow:hidden;transition:transform .14s,box-shadow .14s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.kpi-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.kpi-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.kpi-icon i{font-size:17px}
+.kpi-num{font-size:26px;font-weight:700;color:var(--text);line-height:1;margin-bottom:3px;font-feature-settings:"tnum"}
+.kpi-label{font-size:11.5px;color:var(--text3);font-weight:400}
+.kpi-sub{font-size:10.5px;margin-top:5px;font-weight:500}
+.kpi-blue .kpi-accent{background:var(--blue)}.kpi-blue .kpi-icon{background:var(--blue-l);color:var(--blue)}.kpi-blue .kpi-sub{color:var(--blue)}
+.kpi-red .kpi-accent{background:var(--red)}.kpi-red .kpi-icon{background:var(--red-l);color:var(--red)}.kpi-red .kpi-sub{color:var(--red)}
+.kpi-green .kpi-accent{background:var(--green)}.kpi-green .kpi-icon{background:var(--green-l);color:var(--green)}.kpi-green .kpi-sub{color:var(--green)}
+.kpi-amber .kpi-accent{background:var(--amber)}.kpi-amber .kpi-icon{background:var(--amber-l);color:var(--amber)}.kpi-amber .kpi-sub{color:var(--amber)}
+.kpi-navy .kpi-accent{background:var(--navy)}.kpi-navy .kpi-icon{background:rgba(15,31,61,.08);color:var(--navy)}.kpi-navy .kpi-sub{color:var(--navy-mid)}
+
+.targets-row{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.target-card{background:var(--white);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm);border:1px solid var(--border)}
+.target-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.target-title{font-size:12.5px;font-weight:500;color:var(--text2)}
+.target-nums{display:flex;align-items:baseline;gap:5px;margin-bottom:10px}
+.target-curr{font-size:24px;font-weight:700;color:var(--text);font-feature-settings:"tnum"}
+.target-slash{font-size:15px;color:var(--text3)}
+.target-goal{font-size:15px;font-weight:500;color:var(--text3);font-feature-settings:"tnum"}
+.target-unit{font-size:11px;color:var(--text3)}
+.prog-bar{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .5s ease}
+
+.charts-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:13px}
+.chart-card{background:var(--white);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm);border:1px solid var(--border)}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chart-title{font-size:13px;font-weight:600;color:var(--text)}
+.tf-group{display:flex;gap:2px;background:var(--bg2);border-radius:8px;padding:2px}
+.tf-btn{font-size:11px;font-weight:500;padding:4px 9px;border-radius:6px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:'Poppins',sans-serif;transition:all .12s}
+.tf-btn.active{background:var(--white);color:var(--navy);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.kanban-wrap{flex:1;overflow-x:auto;overflow-y:hidden;padding:18px 22px;display:flex;gap:13px;align-items:flex-start}
+.k-col{min-width:196px;width:196px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;max-height:100%}
+.k-col-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 2px 4px}
+.k-col-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.k-col-count{font-size:10.5px;font-weight:600;background:var(--bg2);color:var(--text3);padding:2px 8px;border-radius:20px}
+.k-col-cards{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:2px;min-height:60px;border-radius:var(--radius);transition:background .15s}
+.k-col-cards.drag-over{background:rgba(30,107,189,.06);outline:2px dashed rgba(30,107,189,.3)}
+
+.lead-card{background:var(--white);border-radius:var(--radius);padding:11px 12px;box-shadow:var(--shadow-sm);border:1px solid var(--border);transition:box-shadow .14s,transform .14s,opacity .14s;cursor:pointer;user-select:none}
+.lead-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.lead-card.dragging{opacity:.3;cursor:grabbing;}
+.card-co{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-role{font-size:11px;color:var(--text3);margin-bottom:5px}
+.card-proj{font-size:11px;color:var(--blue);font-weight:500;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px}
+.card-proj i{font-size:10px;flex-shrink:0}
+.card-contact{font-size:11px;color:var(--text2);margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.card-contact i{font-size:11px;color:var(--text3);flex-shrink:0}
+.card-tag{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:20px;margin-bottom:7px}
+.tag-overdue{background:var(--red-l);color:var(--red)}
+.tag-today{background:var(--amber-l);color:#92400e}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
+.card-date{font-size:10px;color:var(--text3)}
+.card-acts{display:flex;gap:1px}
+.cta{width:25px;height:25px;border-radius:6px;border:none;background:transparent;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.cta:hover{background:var(--bg2);color:var(--navy)}
+.cta.hot:hover{background:var(--red-l);color:var(--red)}
+.cta.appt:hover{background:var(--blue-l);color:var(--blue)}
+.cta.arch:hover{background:var(--amber-l);color:var(--amber)}
+.cta.del:hover{background:var(--red-l);color:var(--red)}
+.cta i{font-size:13px}
+
+.list-wrap{flex:1;overflow:auto;padding:18px 22px}
+.list-tbl{width:100%;border-collapse:collapse;background:var(--white);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--border)}
+.list-tbl th{text-align:left;font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:11px 14px;background:var(--bg);border-bottom:1px solid var(--border)}
+.list-tbl td{padding:11px 14px;font-size:12.5px;color:var(--text);border-bottom:1px solid var(--border);vertical-align:middle}
+.list-tbl tr:last-child td{border-bottom:none}
+.list-tbl tr:hover td{background:var(--bg)}
+.stage-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--blue-l);color:var(--blue);text-transform:uppercase;letter-spacing:.3px}
+
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(10,20,45,.55);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-ov.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius-lg);box-shadow:0 12px 48px rgba(10,20,45,.2);width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:mIn .18s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-hdr{padding:20px 22px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:1}
+.modal-title{font-size:15px;font-weight:600;color:var(--text)}
+.modal-close{width:28px;height:28px;border-radius:7px;border:none;background:var(--bg2);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.modal-close:hover{background:var(--red-l);color:var(--red)}
+.modal-close i{font-size:15px}
+.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:13px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;position:sticky;bottom:0;background:var(--white)}
+
+.field-grp{display:flex;flex-direction:column;gap:5px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.field-label{font-size:11.5px;font-weight:500;color:var(--text2)}
+.field-input{width:100%;padding:8px 11px;font-size:12.5px;font-family:'Poppins',sans-serif;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);background:var(--white);outline:none;transition:border-color .14s}
+.field-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(30,107,189,.1)}
+textarea.field-input{resize:vertical;min-height:65px}
+select.field-input{cursor:pointer}
+
+/* View modal fields */
+.view-field{display:flex;flex-direction:column;gap:3px;padding:10px 0;border-bottom:1px solid var(--border)}
+.view-field:last-child{border-bottom:none}
+.view-field-label{font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.view-field-value{font-size:13px;color:var(--text)}
+
+.confirm-modal{background:var(--white);border-radius:var(--radius-lg);box-shadow:0 12px 48px rgba(10,20,45,.2);width:360px;padding:28px 24px;text-align:center;animation:mIn .18s ease}
+.confirm-icon{width:50px;height:50px;background:var(--red-l);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 13px}
+.confirm-icon i{font-size:22px;color:var(--red)}
+.confirm-title{font-size:15px;font-weight:600;margin-bottom:7px}
+.confirm-txt{font-size:12.5px;color:var(--text2);margin-bottom:18px;line-height:1.6}
+.confirm-acts{display:flex;gap:9px;justify-content:center}
+
+.settings-wrap{flex:1;overflow-y:auto;padding:22px}
+.settings-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border);max-width:580px}
+.settings-sec{padding:22px;border-bottom:1px solid var(--border)}
+.settings-sec:last-child{border-bottom:none}
+.settings-sec-title{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:14px}
+.settings-fields{display:flex;flex-direction:column;gap:13px}
+.logo-area{display:flex;flex-direction:column;gap:10px}
+.logo-preview{width:100%;max-width:300px;height:80px;border:1.5px dashed var(--border2);border-radius:var(--radius);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.logo-preview img{max-width:100%;max-height:100%;object-fit:contain;padding:6px}
+.logo-preview .logo-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text3)}
+.logo-preview .logo-placeholder i{font-size:24px}
+.logo-preview .logo-placeholder span{font-size:11px}
+.logo-btns{display:flex;gap:8px}
+
+.appt-dt{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:5px}
+.appt-dt i{font-size:12px;color:var(--text3)}
+.meet-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);font-weight:500;text-decoration:none;margin-bottom:5px}
+.meet-link:hover{text-decoration:underline}
+.meet-link i{font-size:11px}
+.cold-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:7px;padding:2px}
+
+#toast{position:fixed;bottom:22px;right:22px;background:var(--navy);color:#fff;padding:11px 16px;border-radius:var(--radius);font-size:12.5px;font-weight:500;box-shadow:var(--shadow);z-index:9999;opacity:0;transform:translateY(6px);transition:all .22s;display:flex;align-items:center;gap:8px;pointer-events:none}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast i{font-size:15px;color:var(--green)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo-wrap" id="sbLogoWrap"><i class="ti ti-shield-check"></i></div>
+    <div class="sb-brand">
+      <div class="sb-name" id="sbName">Sonny Jones H&S</div>
+      <div class="sb-sub">Lead Tracker</div>
+    </div>
+  </div>
+  <button class="sb-toggle" id="sbToggle"><i class="ti ti-chevron-left"></i></button>
+  <div class="sb-nav">
+    <div class="sb-section">Overview</div>
+    <div class="nav-item active" data-page="dashboard"><i class="ti ti-layout-dashboard"></i><span class="nav-label">Dashboard</span></div>
+    <div class="sb-section">Pipeline</div>
+    <div class="nav-item" data-page="barbour"><i class="ti ti-building-skyscraper"></i><span class="nav-label">Barbour ABI Leads</span></div>
+    <div class="nav-item" data-page="linkedin"><i class="ti ti-brand-linkedin"></i><span class="nav-label">LinkedIn Leads</span></div>
+    <div class="sb-section">Active</div>
+    <div class="nav-item" data-page="hotleads"><i class="ti ti-flame"></i><span class="nav-label">Hot Leads</span><span class="nav-badge" id="hotBadge" style="display:none">0</span></div>
+    <div class="nav-item" data-page="appointments"><i class="ti ti-calendar-check"></i><span class="nav-label">Appointments</span></div>
+    <div class="sb-section">Records</div>
+    <div class="nav-item" data-page="clients"><i class="ti ti-users-group"></i><span class="nav-label">Existing Clients</span></div>
+    <div class="nav-item" data-page="coldleads"><i class="ti ti-archive"></i><span class="nav-label">Cold Leads</span></div>
+  </div>
+  <div class="sb-bottom">
+    <div class="nav-item" data-page="settings"><i class="ti ti-settings"></i><span class="nav-label">Settings</span></div>
+  </div>
+</nav>
+
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-title" id="pageTitle">Dashboard</div>
+    <div class="topbar-actions" id="topbarActions"></div>
+  </div>
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="dash-scroll">
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-blue"><div class="kpi-accent"></div><div class="kpi-icon"><i class="ti ti-users"></i></div><div class="kpi-num" id="kpi-today">0</div><div class="kpi-label">Leads Reached Today</div><div class="kpi-sub">from all pipelines</div></div>
+          <div class="kpi-card kpi-red"><div class="kpi-accent"></div><div class="kpi-icon"><i class="ti ti-flame"></i></div><div class="kpi-num" id="kpi-hot">0</div><div class="kpi-label">Hot Leads</div><div class="kpi-sub">active pipeline</div></div>
+          <div class="kpi-card kpi-green"><div class="kpi-accent"></div><div class="kpi-icon"><i class="ti ti-calendar-check"></i></div><div class="kpi-num" id="kpi-appts">0</div><div class="kpi-label">Appointments Booked</div><div class="kpi-sub">this month</div></div>
+          <div class="kpi-card kpi-amber"><div class="kpi-accent"></div><div class="kpi-icon"><i class="ti ti-message-check"></i></div><div class="kpi-num" id="kpi-reply">0%</div><div class="kpi-label">Reply Rate</div><div class="kpi-sub">replied / contacted</div></div>
+          <div class="kpi-card kpi-navy" style="cursor:pointer" onclick="navigateTo('barbour')"><div class="kpi-accent"></div><div class="kpi-icon"><i class="ti ti-clock-exclamation"></i></div><div class="kpi-num" id="kpi-followups">0</div><div class="kpi-label">Follow Ups Due Today</div><div class="kpi-sub">click to view</div></div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:11px;display:flex;align-items:center;gap:7px">
+            <i class="ti ti-target" style="font-size:16px;color:var(--blue)"></i> Your Targets
+            <span style="font-size:11px;font-weight:400;color:var(--text3)">— edit in Settings</span>
+          </div>
+          <div class="targets-row">
+            <div class="target-card">
+              <div class="target-hdr"><div class="target-title">Daily Leads Target</div></div>
+              <div class="target-nums"><span class="target-curr" id="t-daily-curr">0</span><span class="target-slash">/</span><span class="target-goal" id="t-daily-goal">10</span><span class="target-unit">leads today</span></div>
+              <div class="prog-bar"><div class="prog-fill" id="t-daily-bar" style="background:var(--blue);width:0%"></div></div>
+            </div>
+            <div class="target-card">
+              <div class="target-hdr"><div class="target-title">Monthly Appointments</div></div>
+              <div class="target-nums"><span class="target-curr" id="t-appts-curr">0</span><span class="target-slash">/</span><span class="target-goal" id="t-appts-goal">5</span><span class="target-unit">this month</span></div>
+              <div class="prog-bar"><div class="prog-fill" id="t-appts-bar" style="background:var(--green);width:0%"></div></div>
+            </div>
+            <div class="target-card">
+              <div class="target-hdr"><div class="target-title">Monthly Reply Rate</div></div>
+              <div class="target-nums"><span class="target-curr" id="t-reply-curr">0%</span><span class="target-slash">/</span><span class="target-goal" id="t-reply-goal">30</span><span class="target-unit">% target</span></div>
+              <div class="prog-bar"><div class="prog-fill" id="t-reply-bar" style="background:var(--amber);width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-hdr">
+              <div class="chart-title">Leads Reached</div>
+              <div class="tf-group"><button class="tf-btn active" onclick="setFilter('week',this)">Week</button><button class="tf-btn" onclick="setFilter('month',this)">Month</button><button class="tf-btn" onclick="setFilter('all',this)">All Time</button></div>
+            </div>
+            <div style="position:relative;height:150px"><canvas id="chartLeads"></canvas></div>
+          </div>
+          <div class="chart-card"><div class="chart-hdr"><div class="chart-title">Lead Sources</div></div><div style="position:relative;height:150px"><canvas id="chartSources"></canvas></div></div>
+          <div class="chart-card"><div class="chart-hdr"><div class="chart-title">Pipeline Stages</div></div><div style="position:relative;height:150px"><canvas id="chartFunnel"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARBOUR -->
+    <div class="page" id="page-barbour">
+      <div class="kanban-wrap" id="barbourKanban"></div>
+      <div class="list-wrap" id="barbourList" style="display:none"><table class="list-tbl"><thead><tr><th>Company</th><th>Role</th><th>Project</th><th>Contact</th><th>Phone</th><th>Follow Up</th><th>Stage</th><th>Actions</th></tr></thead><tbody id="barbourListBody"></tbody></table></div>
+    </div>
+    <!-- LINKEDIN -->
+    <div class="page" id="page-linkedin">
+      <div class="kanban-wrap" id="linkedinKanban"></div>
+      <div class="list-wrap" id="linkedinList" style="display:none"><table class="list-tbl"><thead><tr><th>Name</th><th>Job Title</th><th>Company</th><th>Location</th><th>Follow Up</th><th>Stage</th><th>Actions</th></tr></thead><tbody id="linkedinListBody"></tbody></table></div>
+    </div>
+    <!-- HOT LEADS -->
+    <div class="page" id="page-hotleads">
+      <div class="kanban-wrap" id="hotKanban"></div>
+      <div class="list-wrap" id="hotList" style="display:none"><table class="list-tbl"><thead><tr><th>Company</th><th>Contact</th><th>Phone</th><th>Source</th><th>Follow Up</th><th>Stage</th><th>Actions</th></tr></thead><tbody id="hotListBody"></tbody></table></div>
+    </div>
+    <!-- APPOINTMENTS -->
+    <div class="page" id="page-appointments">
+      <div class="kanban-wrap" id="apptKanban"></div>
+      <div class="list-wrap" id="apptList" style="display:none"><table class="list-tbl"><thead><tr><th>Contact</th><th>Company</th><th>Date</th><th>Time</th><th>Meeting Link</th><th>Stage</th><th>Actions</th></tr></thead><tbody id="apptListBody"></tbody></table></div>
+    </div>
+    <!-- CLIENTS -->
+    <div class="page" id="page-clients">
+      <div class="kanban-wrap" id="clientsKanban"></div>
+      <div class="list-wrap" id="clientsList" style="display:none"><table class="list-tbl"><thead><tr><th>Company</th><th>Contact</th><th>Email</th><th>Website</th><th>Stage</th><th>Actions</th></tr></thead><tbody id="clientsListBody"></tbody></table></div>
+    </div>
+    <!-- COLD LEADS -->
+    <div class="page" id="page-coldleads">
+      <div class="kanban-wrap" id="coldKanban" style="flex-wrap:wrap;align-content:flex-start"></div>
+      <div class="list-wrap" id="coldList" style="display:none"><table class="list-tbl"><thead><tr><th>Company</th><th>Contact</th><th>Phone</th><th>Email</th><th>Source</th><th>Actions</th></tr></thead><tbody id="coldListBody"></tbody></table></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="settings-wrap">
+        <div class="settings-card">
+          <div class="settings-sec">
+            <div class="settings-sec-title">Business Logo</div>
+            <div class="logo-area">
+              <div class="logo-preview" id="logoPreview"><div class="logo-placeholder"><i class="ti ti-photo-up"></i><span>No logo uploaded</span></div></div>
+              <div class="logo-btns">
+                <label class="btn" style="cursor:pointer" for="logoInput"><i class="ti ti-upload"></i> Upload Logo</label>
+                <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+                <button class="btn btn-danger btn-sm" onclick="deleteLogo()" id="deleteLogoBtn" style="display:none"><i class="ti ti-trash"></i> Remove</button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-sec">
+            <div class="settings-sec-title">Business Details</div>
+            <div class="settings-fields">
+              <div class="field-grp"><label class="field-label">Business Name</label><input class="field-input" id="set-bizname" placeholder="e.g. Acme Health & Safety Ltd"></div>
+              <div class="field-row">
+                <div class="field-grp"><label class="field-label">Your Name</label><input class="field-input" id="set-name" placeholder="Your first name"></div>
+                <div class="field-grp"><label class="field-label">Email</label><input class="field-input" id="set-email" placeholder="your@email.com"></div>
+              </div>
+              <div class="field-grp"><label class="field-label">Default Follow Up Days</label><input class="field-input" id="set-followdays" type="number" value="7" style="max-width:110px"></div>
+            </div>
+          </div>
+          <div class="settings-sec">
+            <div class="settings-sec-title">Dashboard Targets</div>
+            <div class="settings-fields">
+              <div class="field-row">
+                <div class="field-grp"><label class="field-label">Daily Leads Target</label><input class="field-input" id="set-dailytarget" type="number" placeholder="10"></div>
+                <div class="field-grp"><label class="field-label">Monthly Appointments Target</label><input class="field-input" id="set-apptstarget" type="number" placeholder="5"></div>
+              </div>
+              <div class="field-grp"><label class="field-label">Monthly Reply Rate Target (%)</label><input class="field-input" id="set-replytarget" type="number" placeholder="30" style="max-width:110px"></div>
+            </div>
+          </div>
+          <div class="settings-sec"><button class="btn btn-primary" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> Save Changes</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-ov" id="viewModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="viewModalTitle">Lead Details</div>
+      <button class="modal-close" onclick="closeViewModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="viewModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeViewModal()">Close</button>
+      <button class="btn btn-primary" id="viewEditBtn"><i class="ti ti-pencil"></i> Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-ov" id="addModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modalTitle">Add New Lead</div>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitModal()"><i class="ti ti-check"></i> <span id="modalSubmitLabel">Save</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="modal-ov" id="confirmModal">
+  <div class="confirm-modal">
+    <div class="confirm-icon"><i class="ti ti-trash"></i></div>
+    <div class="confirm-title">Delete this record?</div>
+    <div class="confirm-txt">This cannot be undone. The record will be permanently removed.</div>
+    <div class="confirm-acts">
+      <button class="btn" onclick="document.getElementById('confirmModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn"><i class="ti ti-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"><i class="ti ti-check"></i><span id="toastMsg">Done!</span></div>
+
+<script>
+const SB_URL='https://dhuphfzgjjzcnucksriw.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRodXBoZnpnamp6Y251Y2tzcml3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDc4NDUsImV4cCI6MjA5NjIyMzg0NX0.Y2bYAUx8sJsNF0LYQa_lPNBSwL0kNqvXQFYit8u0oo4';
+let sb=null;
+try{sb=supabase.createClient(SB_URL,SB_KEY);}catch(e){}
+
+const CFG={
+  barbour:{stages:['to_contact','contacted','follow_up_1','follow_up_2','follow_up_3','replied','call_booked','cold'],labels:{to_contact:'To Contact',contacted:'Contacted',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',follow_up_3:'Follow Up 3',replied:'Replied',call_booked:'Call Booked',cold:'Cold'},table:'barbour_leads'},
+  linkedin:{stages:['to_connect','connection_sent','connected','dm_sent','follow_up_1','follow_up_2','replied','call_booked','cold'],labels:{to_connect:'To Connect',connection_sent:'Connection Sent',connected:'Connected',dm_sent:'DM Sent',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',replied:'Replied',call_booked:'Call Booked',cold:'Cold'},table:'linkedin_leads'},
+  hotleads:{stages:['to_contact','contacted','follow_up_1','follow_up_2','replied','call_booked'],labels:{to_contact:'To Contact',contacted:'Contacted',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',replied:'Replied',call_booked:'Call Booked'},table:'hot_leads'},
+  appointments:{stages:['booked','completed','won','lost'],labels:{booked:'Booked',completed:'Completed',won:'Won',lost:'Lost'},table:'appointments'},
+  clients:{stages:['active','retainer','on_hold','completed','lapsed'],labels:{active:'Active',retainer:'Retainer',on_hold:'On Hold',completed:'Completed',lapsed:'Lapsed'},table:'existing_clients'}
+};
+
+let state={barbour:[],linkedin:[],hotleads:[],appointments:[],clients:[],coldleads:[],settings:{business_name:'Sonny Jones Health & Safety Ltd',your_name:'Sonny',email:'',default_followup_days:7,daily_leads_target:10,monthly_appts_target:5,monthly_reply_target:30,logo_url:''}};
+let currentPage='dashboard',viewMode={},chartLeads,chartSources,chartFunnel,currentFilter='week';
+
+document.getElementById('sbToggle').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('collapsed'));
+document.querySelectorAll('.nav-item[data-page]').forEach(el=>el.addEventListener('click',()=>navigateTo(el.dataset.page)));
+
+function navigateTo(page){
+  currentPage=page;
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+  updateTopbar(page);renderPage(page);
+}
+
+function updateTopbar(page){
+  const titles={dashboard:'Dashboard',barbour:'Barbour ABI Leads',linkedin:'LinkedIn Leads',hotleads:'Hot Leads',appointments:'Appointments',clients:'Existing Clients',coldleads:'Cold Leads',settings:'Settings'};
+  document.getElementById('pageTitle').textContent=titles[page]||page;
+  const acts=document.getElementById('topbarActions');acts.innerHTML='';
+  if(!['dashboard','settings'].includes(page)){
+    const vm=viewMode[page]||'kanban';
+    acts.innerHTML=`<div class="toggle-group"><button class="tgl-btn ${vm==='kanban'?'active':''}" onclick="setView('${page}','kanban',this)"><i class="ti ti-layout-columns"></i> Kanban</button><button class="tgl-btn ${vm==='list'?'active':''}" onclick="setView('${page}','list',this)"><i class="ti ti-list"></i> List</button></div>`;
+  }
+  const addMap={barbour:`<button class="btn btn-primary" onclick="openAddModal('barbour')"><i class="ti ti-plus"></i> Add Lead</button><button class="btn" onclick="exportCSV('barbour')"><i class="ti ti-download"></i> Export CSV</button>`,linkedin:`<button class="btn btn-primary" onclick="openAddModal('linkedin')"><i class="ti ti-plus"></i> Add Lead</button><button class="btn" onclick="exportCSV('linkedin')"><i class="ti ti-download"></i> Export CSV</button>`,hotleads:`<button class="btn btn-primary" onclick="openAddModal('hotleads')"><i class="ti ti-plus"></i> Add Lead</button><button class="btn" onclick="exportCSV('hotleads')"><i class="ti ti-download"></i> Export CSV</button>`,appointments:`<button class="btn btn-primary" onclick="openAddModal('appointments')"><i class="ti ti-plus"></i> Add Appointment</button><button class="btn" onclick="exportCSV('appointments')"><i class="ti ti-download"></i> Export CSV</button>`,clients:`<button class="btn btn-primary" onclick="openAddModal('clients')"><i class="ti ti-plus"></i> Add Client</button><button class="btn" onclick="exportCSV('clients')"><i class="ti ti-download"></i> Export CSV</button>`,coldleads:`<button class="btn btn-primary" onclick="openAddModal('coldleads')"><i class="ti ti-plus"></i> Add Lead</button><button class="btn" onclick="exportCSV('coldleads')"><i class="ti ti-download"></i> Export CSV</button>`};
+  if(addMap[page]) acts.insertAdjacentHTML('beforeend',addMap[page]);
+}
+
+function setView(page,mode,btn){viewMode[page]=mode;btn.closest('.toggle-group').querySelectorAll('.tgl-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderPage(page);}
+
+function renderPage(page){
+  if(page==='dashboard') renderDashboard();
+  else if(page==='coldleads') renderCold();
+  else if(page==='settings') loadSettings();
+  else if(CFG[page]) renderKanbanOrList(page);
+}
+
+function renderKanbanOrList(page){
+  const mode=viewMode[page]||'kanban';
+  const kEl=document.getElementById(page+'Kanban');
+  const lEl=document.getElementById(page+'List');
+  const bEl=document.getElementById(page+'ListBody');
+  if(mode==='kanban'){kEl.style.display='flex';if(lEl)lEl.style.display='none';renderKanban(page,kEl);}
+  else{kEl.style.display='none';if(lEl)lEl.style.display='block';renderList(page,bEl);}
+}
+
+let dragItem=null,dragDataKey=null,dragId=null;
+
+function renderKanban(page,container){
+  const cfg=CFG[page];const data=state[page]||[];
+  container.innerHTML='';
+  cfg.stages.forEach(stage=>{
+    const cards=data.filter(d=>d.stage===stage);
+    const col=document.createElement('div');col.className='k-col';
+    col.innerHTML=`<div class="k-col-hdr"><span class="k-col-title">${cfg.labels[stage]}</span><span class="k-col-count" id="cnt-${page}-${stage}">${cards.length}</span></div><div class="k-col-cards" id="col-${page}-${stage}" data-page="${page}" data-stage="${stage}">${cards.map(c=>cardHTML(page,c)).join('')}</div>`;
+    container.appendChild(col);
+  });
+  initDragDrop(container,page);
+}
+
+function initDragDrop(container,page){
+  container.querySelectorAll('.lead-card').forEach(card=>{
+    card.setAttribute('draggable','true');
+    card.addEventListener('dragstart',e=>{dragItem=card;dragDataKey=page;dragId=card.dataset.id;card.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');dragItem=null;});
+  });
+  container.querySelectorAll('.k-col-cards').forEach(col=>{
+    col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drag-over');const after=getDragAfterElement(col,e.clientY);if(dragItem){if(after===null)col.appendChild(dragItem);else col.insertBefore(dragItem,after);}});
+    col.addEventListener('dragleave',()=>col.classList.remove('drag-over'));
+    col.addEventListener('drop',async e=>{
+      e.preventDefault();col.classList.remove('drag-over');
+      const newStage=col.dataset.stage;const page2=col.dataset.page;
+      if(!dragId||!newStage)return;
+      const item=state[page2]?.find(d=>d.id==dragId);
+      if(item&&item.stage!==newStage){item.stage=newStage;if(sb)await sb.from(CFG[page2].table).update({stage:newStage}).eq('id',dragId);updateColCounts(page2);renderDashboard();updateHotBadge();showToast('Stage updated!');}
+      dragItem=null;dragId=null;
+    });
+  });
+}
+
+function getDragAfterElement(col,y){
+  const els=[...col.querySelectorAll('.lead-card:not(.dragging)')];
+  return els.reduce((closest,el)=>{const box=el.getBoundingClientRect();const offset=y-box.top-box.height/2;if(offset<0&&offset>closest.offset)return{offset,el};return closest;},{offset:Number.NEGATIVE_INFINITY}).el||null;
+}
+
+function updateColCounts(page){
+  const cfg=CFG[page];if(!cfg)return;
+  const data=state[page]||[];
+  cfg.stages.forEach(stage=>{const el=document.getElementById(`cnt-${page}-${stage}`);if(el)el.textContent=data.filter(d=>d.stage===stage).length;});
+}
+
+function fmtDate(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}
+
+function fuTag(date){
+  if(!date)return'';
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(date);d.setHours(0,0,0,0);
+  if(d<today)return`<span class="card-tag tag-overdue"><i class="ti ti-alert-circle"></i> Overdue</span>`;
+  if(d.getTime()===today.getTime())return`<span class="card-tag tag-today"><i class="ti ti-clock"></i> Due Today</span>`;
+  return'';
+}
+
+function stopProp(e){e.stopPropagation();}
+
+function cardHTML(page,lead){
+  const acts={
+    barbour:`<button class="cta hot" title="Mark Hot" onclick="event.stopPropagation();markHot('barbour','${lead.id}')"><i class="ti ti-flame"></i></button><button class="cta appt" title="Book Appt" onclick="event.stopPropagation();bookAppt('barbour','${lead.id}')"><i class="ti ti-calendar-plus"></i></button><button class="cta arch" title="Archive" onclick="event.stopPropagation();archiveLead('barbour','${lead.id}')"><i class="ti ti-archive"></i></button><button class="cta" title="Edit" onclick="event.stopPropagation();openEditModal('barbour','${lead.id}')"><i class="ti ti-pencil"></i></button><button class="cta del" title="Delete" onclick="event.stopPropagation();confirmDelete('barbour','${lead.id}')"><i class="ti ti-trash"></i></button>`,
+    linkedin:`<button class="cta hot" title="Mark Hot" onclick="event.stopPropagation();markHot('linkedin','${lead.id}')"><i class="ti ti-flame"></i></button><button class="cta appt" title="Book Appt" onclick="event.stopPropagation();bookAppt('linkedin','${lead.id}')"><i class="ti ti-calendar-plus"></i></button><button class="cta arch" title="Archive" onclick="event.stopPropagation();archiveLead('linkedin','${lead.id}')"><i class="ti ti-archive"></i></button><button class="cta" title="Edit" onclick="event.stopPropagation();openEditModal('linkedin','${lead.id}')"><i class="ti ti-pencil"></i></button><button class="cta del" title="Delete" onclick="event.stopPropagation();confirmDelete('linkedin','${lead.id}')"><i class="ti ti-trash"></i></button>`,
+    hotleads:`<button class="cta appt" title="Book Appt" onclick="event.stopPropagation();bookAppt('hotleads','${lead.id}')"><i class="ti ti-calendar-plus"></i></button><button class="cta arch" title="Archive" onclick="event.stopPropagation();archiveLead('hotleads','${lead.id}')"><i class="ti ti-archive"></i></button><button class="cta" title="Edit" onclick="event.stopPropagation();openEditModal('hotleads','${lead.id}')"><i class="ti ti-pencil"></i></button><button class="cta del" title="Delete" onclick="event.stopPropagation();confirmDelete('hotleads','${lead.id}')"><i class="ti ti-trash"></i></button>`,
+    appointments:`<button class="cta" style="color:var(--green)" title="Mark Won" onclick="event.stopPropagation();markWon('${lead.id}')"><i class="ti ti-trophy"></i></button><button class="cta del" title="Mark Lost" onclick="event.stopPropagation();markLost('${lead.id}')"><i class="ti ti-x"></i></button><button class="cta" title="Edit" onclick="event.stopPropagation();openEditModal('appointments','${lead.id}')"><i class="ti ti-pencil"></i></button><button class="cta del" title="Delete" onclick="event.stopPropagation();confirmDelete('appointments','${lead.id}')"><i class="ti ti-trash"></i></button>`,
+    clients:`<button class="cta" title="Edit" onclick="event.stopPropagation();openEditModal('clients','${lead.id}')"><i class="ti ti-pencil"></i></button><button class="cta del" title="Delete" onclick="event.stopPropagation();confirmDelete('clients','${lead.id}')"><i class="ti ti-trash"></i></button>`
+  };
+  let inner='';
+  if(page==='barbour'){inner=`<div class="card-co">${lead.company_name||'—'}</div><div class="card-role">${lead.role_on_project||'—'}</div>${lead.project_name?`<div class="card-proj"><i class="ti ti-building-skyscraper"></i>${lead.project_name}</div>`:''}${lead.contact_name?`<div class="card-contact"><i class="ti ti-user"></i>${lead.contact_name}</div>`:''}${fuTag(lead.follow_up_date)}`;}
+  else if(page==='linkedin'){inner=`<div class="card-co">${lead.full_name||'—'}</div><div class="card-role">${lead.job_title||'—'}</div>${lead.company_name?`<div class="card-proj"><i class="ti ti-building"></i>${lead.company_name}</div>`:''}${lead.location?`<div class="card-contact"><i class="ti ti-map-pin"></i>${lead.location}</div>`:''}${fuTag(lead.follow_up_date)}`;}
+  else if(page==='hotleads'){inner=`<div class="card-co">${lead.company_name||'—'}</div>${lead.contact_name?`<div class="card-contact"><i class="ti ti-user"></i>${lead.contact_name}</div>`:''}${lead.source?`<div class="card-role">${lead.source}</div>`:''}${fuTag(lead.follow_up_date)}`;}
+  else if(page==='appointments'){inner=`<div class="card-co">${lead.contact_name||'—'}</div><div class="card-role">${lead.company_name||'—'}</div><div class="appt-dt"><i class="ti ti-calendar"></i>${fmtDate(lead.appt_date)}${lead.appt_time?`<i class="ti ti-clock" style="margin-left:5px"></i>${lead.appt_time}`:''}</div>${lead.meeting_link?`<a class="meet-link" href="${lead.meeting_link}" target="_blank" onclick="event.stopPropagation()"><i class="ti ti-video"></i> Join Meeting</a>`:''}`;}
+  else if(page==='clients'){inner=`<div class="card-co">${lead.company_name||'—'}</div>${lead.contact_person?`<div class="card-contact"><i class="ti ti-user"></i>${lead.contact_person}</div>`:''}${lead.email?`<div class="card-role">${lead.email}</div>`:''}${lead.company_website?`<div class="card-proj"><i class="ti ti-world"></i>${lead.company_website}</div>`:''}` ;}
+  return `<div class="lead-card" data-id="${lead.id}" onclick="viewLead('${page}','${lead.id}')">
+    ${inner}
+    <div class="card-footer"><span class="card-date">${fmtDate(lead.created_at)}</span><div class="card-acts">${acts[page]||''}</div></div>
+  </div>`;
+}
+
+function renderList(page,tbody){
+  if(!tbody)return;const data=state[page]||[];
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:28px">No records yet</td></tr>`;return;}
+  const cfg=CFG[page];
+  tbody.innerHTML=data.map(d=>{
+    let cells='';
+    if(page==='barbour')cells=`<td><strong>${d.company_name||'—'}</strong></td><td>${d.role_on_project||'—'}</td><td>${d.project_name||'—'}</td><td>${d.contact_name||'—'}</td><td>${d.phone||'—'}</td><td>${fmtDate(d.follow_up_date)}</td><td><span class="stage-pill">${cfg.labels[d.stage]||d.stage}</span></td>`;
+    else if(page==='linkedin')cells=`<td><strong>${d.full_name||'—'}</strong></td><td>${d.job_title||'—'}</td><td>${d.company_name||'—'}</td><td>${d.location||'—'}</td><td>${fmtDate(d.follow_up_date)}</td><td><span class="stage-pill">${cfg.labels[d.stage]||d.stage}</span></td>`;
+    else if(page==='hotleads')cells=`<td><strong>${d.company_name||'—'}</strong></td><td>${d.contact_name||'—'}</td><td>${d.phone||'—'}</td><td>${d.source||'—'}</td><td>${fmtDate(d.follow_up_date)}</td><td><span class="stage-pill">${cfg.labels[d.stage]||d.stage}</span></td>`;
+    else if(page==='appointments')cells=`<td><strong>${d.contact_name||'—'}</strong></td><td>${d.company_name||'—'}</td><td>${fmtDate(d.appt_date)}</td><td>${d.appt_time||'—'}</td><td>${d.meeting_link?`<a href="${d.meeting_link}" target="_blank" style="color:var(--blue)">Join</a>`:'—'}</td><td><span class="stage-pill">${cfg.labels[d.stage]||d.stage}</span></td>`;
+    else if(page==='clients')cells=`<td><strong>${d.company_name||'—'}</strong></td><td>${d.contact_person||'—'}</td><td>${d.email||'—'}</td><td>${d.company_website||'—'}</td><td><span class="stage-pill">${cfg.labels[d.stage]||d.stage}</span></td>`;
+    return `<tr>${cells}<td><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="openEditModal('${page}','${d.id}')"><i class="ti ti-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="confirmDelete('${page}','${d.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`;
+  }).join('');
+}
+
+function renderCold(){
+  const mode=viewMode['coldleads']||'kanban';
+  const kEl=document.getElementById('coldKanban');const lEl=document.getElementById('coldList');const data=state.coldleads||[];
+  if(mode==='kanban'){
+    kEl.style.display='flex';if(lEl)lEl.style.display='none';
+    kEl.innerHTML=`<div style="width:100%"><div class="k-col-hdr" style="padding:0 2px 10px"><span class="k-col-title">Cold Leads</span><span class="k-col-count">${data.length}</span></div><div class="cold-grid">${data.length===0?'<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:24px;display:block;margin-bottom:6px;opacity:.4"></i>No cold leads yet</div>':data.map(c=>`<div class="lead-card"><div class="card-co">${c.company_name||'—'}</div>${c.contact_name?`<div class="card-contact"><i class="ti ti-user"></i>${c.contact_name}</div>`:''}<div class="card-role">${c.source||''}</div><div class="card-footer"><span class="card-date">${fmtDate(c.created_at)}</span><div class="card-acts"><button class="cta" onclick="event.stopPropagation();openEditModal('coldleads','${c.id}')"><i class="ti ti-pencil"></i></button><button class="cta del" onclick="event.stopPropagation();confirmDelete('coldleads','${c.id}')"><i class="ti ti-trash"></i></button></div></div></div>`).join('')}</div></div>`;
+  } else {
+    kEl.style.display='none';if(lEl)lEl.style.display='block';
+    const tbody=document.getElementById('coldListBody');
+    if(!data.length){tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:28px">No cold leads yet</td></tr>`;return;}
+    tbody.innerHTML=data.map(d=>`<tr><td><strong>${d.company_name||'—'}</strong></td><td>${d.contact_name||'—'}</td><td>${d.phone||'—'}</td><td>${d.email||'—'}</td><td>${d.source||'—'}</td><td><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="openEditModal('coldleads','${d.id}')"><i class="ti ti-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="confirmDelete('coldleads','${d.id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join('');
+  }
+}
+
+// ── VIEW MODAL (read-only) ──
+function viewLead(page,id){
+  const lead=state[page]?.find(d=>d.id==id);if(!lead)return;
+  const labelMap={project_name:'Project Name',company_name:'Company Name',role_on_project:'Role on Project',contact_name:'Contact Name',full_name:'Full Name',job_title:'Job Title',phone:'Phone',email:'Email',linkedin_url:'LinkedIn URL',location:'Location',follow_up_date:'Follow Up Date',appt_date:'Appointment Date',appt_time:'Time',meeting_link:'Meeting Link',contact_person:'Contact Person',company_website:'Company Website',source:'Source',notes:'Notes',stage:'Stage'};
+  const skipFields=['id','created_at','origin_id','origin_table','is_hot'];
+  const fields=Object.entries(lead).filter(([k,v])=>v&&!skipFields.includes(k)).map(([k,v])=>`<div class="view-field"><div class="view-field-label">${labelMap[k]||k.replace(/_/g,' ')}</div><div class="view-field-value">${v}</div></div>`).join('');
+  document.getElementById('viewModalTitle').textContent=lead.company_name||lead.full_name||'Lead Details';
+  document.getElementById('viewModalBody').innerHTML=fields||'<p style="color:var(--text3);font-size:13px">No details available.</p>';
+  document.getElementById('viewEditBtn').onclick=()=>{closeViewModal();openEditModal(page,id);};
+  document.getElementById('viewModal').classList.add('open');
+}
+function closeViewModal(){document.getElementById('viewModal').classList.remove('open');}
+
+// ── MODAL FORMS ──
+const FORMS={
+  barbour:`<div class="field-row"><div class="field-grp"><label class="field-label">Project Name</label><input class="field-input" id="f-project_name" placeholder="e.g. Riverside Development"></div><div class="field-grp"><label class="field-label">Company Name</label><input class="field-input" id="f-company_name" placeholder="e.g. ABC Construction Ltd"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Role on Project</label><input class="field-input" id="f-role_on_project" placeholder="e.g. Civil Engineer"></div><div class="field-grp"><label class="field-label">Contact Name</label><input class="field-input" id="f-contact_name" placeholder="e.g. James Williams"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Phone</label><input class="field-input" id="f-phone" placeholder="e.g. 01234 567890"></div><div class="field-grp"><label class="field-label">Email</label><input class="field-input" id="f-email" type="email" placeholder="e.g. contact@company.com"></div></div><div class="field-grp"><label class="field-label">LinkedIn URL</label><input class="field-input" id="f-linkedin_url" placeholder="e.g. https://linkedin.com/in/username"></div><div class="field-row"><div class="field-grp"><label class="field-label">Follow Up Date</label><input class="field-input" id="f-follow_up_date" type="date"></div><div class="field-grp"><label class="field-label">Stage</label><select class="field-input" id="f-stage"><option value="to_contact">To Contact</option><option value="contacted">Contacted</option><option value="follow_up_1">Follow Up 1</option><option value="follow_up_2">Follow Up 2</option><option value="follow_up_3">Follow Up 3</option><option value="replied">Replied</option><option value="call_booked">Call Booked</option><option value="cold">Cold</option></select></div></div><div class="field-grp"><label class="field-label">Notes</label><textarea class="field-input" id="f-notes" placeholder="Any additional notes..."></textarea></div>`,
+  linkedin:`<div class="field-grp"><label class="field-label">LinkedIn Profile URL</label><input class="field-input" id="f-linkedin_url" placeholder="e.g. https://linkedin.com/in/username"></div><div class="field-row"><div class="field-grp"><label class="field-label">Full Name</label><input class="field-input" id="f-full_name" placeholder="e.g. Sarah Johnson"></div><div class="field-grp"><label class="field-label">Job Title</label><input class="field-input" id="f-job_title" placeholder="e.g. Managing Director"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Company Name</label><input class="field-input" id="f-company_name" placeholder="e.g. Smith & Partners Ltd"></div><div class="field-grp"><label class="field-label">Location</label><input class="field-input" id="f-location" placeholder="e.g. Manchester, UK"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Follow Up Date</label><input class="field-input" id="f-follow_up_date" type="date"></div><div class="field-grp"><label class="field-label">Stage</label><select class="field-input" id="f-stage"><option value="to_connect">To Connect</option><option value="connection_sent">Connection Sent</option><option value="connected">Connected</option><option value="dm_sent">DM Sent</option><option value="follow_up_1">Follow Up 1</option><option value="follow_up_2">Follow Up 2</option><option value="replied">Replied</option><option value="call_booked">Call Booked</option><option value="cold">Cold</option></select></div></div><div class="field-grp"><label class="field-label">Notes</label><textarea class="field-input" id="f-notes" placeholder="Any additional notes..."></textarea></div>`,
+  hotleads:`<div class="field-row"><div class="field-grp"><label class="field-label">Contact Name</label><input class="field-input" id="f-contact_name" placeholder="e.g. Mark Thompson"></div><div class="field-grp"><label class="field-label">Company Name</label><input class="field-input" id="f-company_name" placeholder="e.g. Thompson Building Ltd"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Phone</label><input class="field-input" id="f-phone" placeholder="e.g. 07700 900123"></div><div class="field-grp"><label class="field-label">Email</label><input class="field-input" id="f-email" type="email" placeholder="e.g. mark@company.com"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Source</label><input class="field-input" id="f-source" placeholder="e.g. Word of mouth, Referral..."></div><div class="field-grp"><label class="field-label">Follow Up Date</label><input class="field-input" id="f-follow_up_date" type="date"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Stage</label><select class="field-input" id="f-stage"><option value="to_contact">To Contact</option><option value="contacted">Contacted</option><option value="follow_up_1">Follow Up 1</option><option value="follow_up_2">Follow Up 2</option><option value="replied">Replied</option><option value="call_booked">Call Booked</option></select></div></div><div class="field-grp"><label class="field-label">Notes</label><textarea class="field-input" id="f-notes" placeholder="Any additional notes..."></textarea></div>`,
+  appointments:`<div class="field-row"><div class="field-grp"><label class="field-label">Contact Name</label><input class="field-input" id="f-contact_name" placeholder="e.g. David Clarke"></div><div class="field-grp"><label class="field-label">Company Name</label><input class="field-input" id="f-company_name" placeholder="e.g. Clarke Developments"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Date</label><input class="field-input" id="f-appt_date" type="date"></div><div class="field-grp"><label class="field-label">Time</label><input class="field-input" id="f-appt_time" type="time"></div></div><div class="field-grp"><label class="field-label">Meeting Link</label><input class="field-input" id="f-meeting_link" placeholder="e.g. https://teams.microsoft.com/meet/..."></div><div class="field-row"><div class="field-grp"><label class="field-label">Stage</label><select class="field-input" id="f-stage"><option value="booked">Booked</option><option value="completed">Completed</option><option value="won">Won</option><option value="lost">Lost</option></select></div></div><div class="field-grp"><label class="field-label">Notes</label><textarea class="field-input" id="f-notes" placeholder="Any additional notes..."></textarea></div>`,
+  clients:`<div class="field-row"><div class="field-grp"><label class="field-label">Company Name</label><input class="field-input" id="f-company_name" placeholder="e.g. Horizon Group Ltd"></div><div class="field-grp"><label class="field-label">Contact Person</label><input class="field-input" id="f-contact_person" placeholder="e.g. Karen Hughes"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Email</label><input class="field-input" id="f-email" type="email" placeholder="e.g. karen@horizon.com"></div><div class="field-grp"><label class="field-label">Company Website</label><input class="field-input" id="f-company_website" placeholder="e.g. www.horizongroup.co.uk"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Stage</label><select class="field-input" id="f-stage"><option value="active">Active</option><option value="retainer">Retainer</option><option value="on_hold">On Hold</option><option value="completed">Completed</option><option value="lapsed">Lapsed</option></select></div></div><div class="field-grp"><label class="field-label">Notes</label><textarea class="field-input" id="f-notes" placeholder="Any additional notes..."></textarea></div>`,
+  coldleads:`<div class="field-row"><div class="field-grp"><label class="field-label">Contact Name</label><input class="field-input" id="f-contact_name" placeholder="e.g. Peter Walsh"></div><div class="field-grp"><label class="field-label">Company Name</label><input class="field-input" id="f-company_name" placeholder="e.g. Walsh Civil Engineering"></div></div><div class="field-row"><div class="field-grp"><label class="field-label">Phone</label><input class="field-input" id="f-phone" placeholder="e.g. 01234 567890"></div><div class="field-grp"><label class="field-label">Email</label><input class="field-input" id="f-email" type="email" placeholder="e.g. peter@walsh.com"></div></div><div class="field-grp"><label class="field-label">Source</label><input class="field-input" id="f-source" placeholder="e.g. Barbour ABI, LinkedIn, Referral..."></div><div class="field-grp"><label class="field-label">Notes</label><textarea class="field-input" id="f-notes" placeholder="Any additional notes..."></textarea></div>`
+};
+
+let modalMode='add',modalDataKey='',modalEditId=null;
+
+function openAddModal(key){
+  modalMode='add';modalDataKey=key;modalEditId=null;
+  const titles={barbour:'Add New Barbour Lead',linkedin:'Add New LinkedIn Lead',hotleads:'Add New Hot Lead',appointments:'Add New Appointment',clients:'Add New Client',coldleads:'Add New Cold Lead'};
+  document.getElementById('modalTitle').textContent=titles[key]||'Add New';
+  document.getElementById('modalSubmitLabel').textContent='Save';
+  document.getElementById('modalBody').innerHTML=FORMS[key]||'';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEditModal(key,id){
+  modalMode='edit';modalDataKey=key;modalEditId=id;
+  const item=state[key]?.find(d=>d.id==id);if(!item)return;
+  const titles={barbour:'Edit Barbour Lead',linkedin:'Edit LinkedIn Lead',hotleads:'Edit Hot Lead',appointments:'Edit Appointment',clients:'Edit Client',coldleads:'Edit Cold Lead'};
+  document.getElementById('modalTitle').textContent=titles[key]||'Edit';
+  document.getElementById('modalSubmitLabel').textContent='Update';
+  document.getElementById('modalBody').innerHTML=FORMS[key]||'';
+  Object.keys(item).forEach(k=>{const el=document.getElementById(`f-${k}`);if(el)el.value=item[k]||'';});
+  document.getElementById('addModal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('addModal').classList.remove('open');}
+
+async function submitModal(){
+  const body=document.getElementById('modalBody');const data={};
+  body.querySelectorAll('[id^="f-"]').forEach(el=>{data[el.id.replace('f-','')]=el.value||null;});
+  const tableMap={barbour:'barbour_leads',linkedin:'linkedin_leads',hotleads:'hot_leads',appointments:'appointments',clients:'existing_clients',coldleads:'cold_leads'};
+  const defaults={barbour:'to_contact',linkedin:'to_connect',hotleads:'to_contact',appointments:'booked',clients:'active'};
+  if(modalMode==='add'){
+    data.id=crypto.randomUUID();data.created_at=new Date().toISOString();
+    if(!data.stage)data.stage=defaults[modalDataKey]||null;
+    state[modalDataKey]=state[modalDataKey]||[];state[modalDataKey].push(data);
+    if(sb)await sb.from(tableMap[modalDataKey]).insert(data);
+    showToast('Lead added!');
+  } else {
+    const idx=state[modalDataKey].findIndex(d=>d.id==modalEditId);
+    if(idx>-1)Object.assign(state[modalDataKey][idx],data);
+    if(sb)await sb.from(tableMap[modalDataKey]).update(data).eq('id',modalEditId);
+    showToast('Updated!');
+  }
+  closeModal();renderPage(currentPage);renderDashboard();updateHotBadge();
+}
+
+// ── ACTIONS ──
+async function markHot(key,id){
+  const lead=state[key]?.find(d=>d.id==id);if(!lead)return;
+  const hot={id:crypto.randomUUID(),contact_name:lead.contact_name||lead.full_name,company_name:lead.company_name,phone:lead.phone,email:lead.email,source:key==='barbour'?'Barbour ABI':'LinkedIn',follow_up_date:lead.follow_up_date,notes:lead.notes,stage:'to_contact',origin_table:key,origin_id:lead.id,created_at:new Date().toISOString()};
+  state.hotleads.push(hot);if(sb)await sb.from('hot_leads').insert(hot);
+  showToast('Marked as Hot Lead!');updateHotBadge();renderPage(currentPage);
+}
+
+async function bookAppt(key,id){
+  const lead=state[key]?.find(d=>d.id==id);if(!lead)return;
+  const appt={id:crypto.randomUUID(),contact_name:lead.contact_name||lead.full_name,company_name:lead.company_name,appt_date:null,appt_time:null,meeting_link:null,notes:lead.notes,stage:'booked',origin_table:key,origin_id:lead.id,created_at:new Date().toISOString()};
+  state.appointments.push(appt);if(sb)await sb.from('appointments').insert(appt);
+  showToast('Appointment created — add date/time in Appointments!');renderPage(currentPage);
+}
+
+async function archiveLead(key,id){
+  const lead=state[key]?.find(d=>d.id==id);if(!lead)return;
+  const cold={id:crypto.randomUUID(),contact_name:lead.contact_name||lead.full_name,company_name:lead.company_name,phone:lead.phone,email:lead.email,source:key==='barbour'?'Barbour ABI':key==='linkedin'?'LinkedIn':lead.source,notes:lead.notes,origin_table:key,origin_id:lead.id,created_at:new Date().toISOString()};
+  state.coldleads.push(cold);state[key]=state[key].filter(d=>d.id!=id);
+  if(sb){const tm={barbour:'barbour_leads',linkedin:'linkedin_leads',hotleads:'hot_leads'};if(tm[key])await sb.from(tm[key]).delete().eq('id',id);await sb.from('cold_leads').insert(cold);}
+  showToast('Archived to Cold Leads');renderPage(currentPage);
+}
+
+async function markWon(id){
+  const appt=state.appointments?.find(d=>d.id==id);if(!appt)return;
+  const client={id:crypto.randomUUID(),company_name:appt.company_name,contact_person:appt.contact_name,email:null,company_website:null,notes:appt.notes,stage:'active',created_at:new Date().toISOString()};
+  state.clients.push(client);appt.stage='won';
+  if(sb){await sb.from('appointments').update({stage:'won'}).eq('id',id);await sb.from('existing_clients').insert(client);}
+  showToast('Moved to Existing Clients!');renderPage(currentPage);
+}
+
+async function markLost(id){
+  const appt=state.appointments?.find(d=>d.id==id);if(!appt)return;
+  const cold={id:crypto.randomUUID(),contact_name:appt.contact_name,company_name:appt.company_name,source:'Lost appointment',notes:appt.notes,origin_table:'appointments',origin_id:appt.id,created_at:new Date().toISOString()};
+  state.coldleads.push(cold);appt.stage='lost';
+  if(sb){await sb.from('appointments').update({stage:'lost'}).eq('id',id);await sb.from('cold_leads').insert(cold);}
+  showToast('Moved to Cold Leads');renderPage(currentPage);
+}
+
+// ── DELETE ──
+let pendingDel=null;
+function confirmDelete(key,id){
+  pendingDel={key,id};document.getElementById('confirmModal').classList.add('open');
+  document.getElementById('confirmDeleteBtn').onclick=async()=>{
+    state[pendingDel.key]=state[pendingDel.key].filter(d=>d.id!=pendingDel.id);
+    if(sb){const tm={barbour:'barbour_leads',linkedin:'linkedin_leads',hotleads:'hot_leads',appointments:'appointments',clients:'existing_clients',coldleads:'cold_leads'};await sb.from(tm[pendingDel.key]).delete().eq('id',pendingDel.id);}
+    document.getElementById('confirmModal').classList.remove('open');
+    showToast('Deleted!');renderPage(currentPage);renderDashboard();updateHotBadge();
+  };
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const allLeads=[...(state.barbour||[]),...(state.linkedin||[])];
+  const todayLeads=allLeads.filter(l=>{const d=new Date(l.created_at);d.setHours(0,0,0,0);return d.getTime()===today.getTime();});
+  const hotCount=(state.hotleads||[]).length;
+  const mStart=new Date();mStart.setDate(1);mStart.setHours(0,0,0,0);
+  const apptCount=(state.appointments||[]).filter(a=>new Date(a.created_at)>=mStart).length;
+  const contacted=allLeads.filter(l=>!['to_contact','to_connect'].includes(l.stage));
+  const replied=allLeads.filter(l=>['replied','call_booked'].includes(l.stage));
+  const replyRate=contacted.length>0?Math.round((replied.length/contacted.length)*100):0;
+  const fueDue=allLeads.filter(l=>{if(!l.follow_up_date)return false;const d=new Date(l.follow_up_date);d.setHours(0,0,0,0);return d<=today;});
+
+  document.getElementById('kpi-today').textContent=todayLeads.length;
+  document.getElementById('kpi-hot').textContent=hotCount;
+  document.getElementById('kpi-appts').textContent=apptCount;
+  document.getElementById('kpi-reply').textContent=replyRate+'%';
+  document.getElementById('kpi-followups').textContent=fueDue.length;
+
+  const s=state.settings;
+  const dGoal=s.daily_leads_target||10;
+  const aGoal=s.monthly_appts_target||5;
+  const rGoal=s.monthly_reply_target||30;
+  document.getElementById('t-daily-goal').textContent=dGoal;
+  document.getElementById('t-daily-curr').textContent=todayLeads.length;
+  document.getElementById('t-daily-bar').style.width=Math.min(100,(todayLeads.length/dGoal)*100)+'%';
+  document.getElementById('t-appts-goal').textContent=aGoal;
+  document.getElementById('t-appts-curr').textContent=apptCount;
+  document.getElementById('t-appts-bar').style.width=Math.min(100,(apptCount/aGoal)*100)+'%';
+  document.getElementById('t-reply-goal').textContent=rGoal;
+  document.getElementById('t-reply-curr').textContent=replyRate+'%';
+  document.getElementById('t-reply-bar').style.width=Math.min(100,(replyRate/rGoal)*100)+'%';
+
+  buildCharts(allLeads);
+}
+
+function buildCharts(allLeads){
+  const days=[],counts=[];
+  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);d.setHours(0,0,0,0);days.push(d.toLocaleDateString('en-GB',{weekday:'short'}));counts.push(allLeads.filter(l=>{const ld=new Date(l.created_at);ld.setHours(0,0,0,0);return ld.getTime()===d.getTime();}).length);}
+  const c1=document.getElementById('chartLeads');if(chartLeads)chartLeads.destroy();
+  chartLeads=new Chart(c1,{type:'bar',data:{labels:days,datasets:[{label:'Leads',data:counts,backgroundColor:'#1e6bbd',borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10,family:'Poppins'},color:'#8a97b5'}},y:{grid:{color:'#eef1f8'},ticks:{font:{size:10,family:'Poppins'},color:'#8a97b5',stepSize:1},beginAtZero:true}}}});
+
+  const c2=document.getElementById('chartSources');if(chartSources)chartSources.destroy();
+  // FIX: Barbour=RED, LinkedIn=BLUE
+  chartSources=new Chart(c2,{type:'doughnut',data:{labels:['Barbour ABI','LinkedIn'],datasets:[{data:[(state.barbour||[]).length||1,(state.linkedin||[]).length],backgroundColor:['#e24b4a','#1e6bbd'],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:10,family:'Poppins'},color:'#4a5a7a',padding:8}}}}});
+
+  const stageData=CFG.barbour.stages.slice(0,6).map(s=>({label:CFG.barbour.labels[s],count:(state.barbour||[]).filter(l=>l.stage===s).length}));
+  const c3=document.getElementById('chartFunnel');if(chartFunnel)chartFunnel.destroy();
+  chartFunnel=new Chart(c3,{type:'bar',data:{labels:stageData.map(s=>s.label),datasets:[{data:stageData.map(s=>s.count),backgroundColor:['#1e6bbd','#2e80d8','#1D9E75','#f59e0b','#e24b4a','#0f1f3d'],borderRadius:5,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#eef1f8'},ticks:{font:{size:10,family:'Poppins'},color:'#8a97b5',stepSize:1},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10,family:'Poppins'},color:'#4a5a7a'}}}}});
+}
+
+function setFilter(f,btn){currentFilter=f;btn.closest('.tf-group').querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderDashboard();}
+
+// ── SETTINGS ──
+function loadSettings(){
+  const s=state.settings;
+  document.getElementById('set-bizname').value=s.business_name||'';
+  document.getElementById('set-name').value=s.your_name||'';
+  document.getElementById('set-email').value=s.email||'';
+  document.getElementById('set-followdays').value=s.default_followup_days||7;
+  document.getElementById('set-dailytarget').value=s.daily_leads_target||10;
+  document.getElementById('set-apptstarget').value=s.monthly_appts_target||5;
+  document.getElementById('set-replytarget').value=s.monthly_reply_target||30;
+  if(s.logo_url){showLogoPreview(s.logo_url);document.getElementById('deleteLogoBtn').style.display='inline-flex';}
+}
+
+function saveSettings(){
+  state.settings={...state.settings,
+    business_name:document.getElementById('set-bizname').value,
+    your_name:document.getElementById('set-name').value,
+    email:document.getElementById('set-email').value,
+    default_followup_days:parseInt(document.getElementById('set-followdays').value)||7,
+    daily_leads_target:parseInt(document.getElementById('set-dailytarget').value)||10,
+    monthly_appts_target:parseInt(document.getElementById('set-apptstarget').value)||5,
+    monthly_reply_target:parseInt(document.getElementById('set-replytarget').value)||30
+  };
+  document.getElementById('sbName').textContent=state.settings.business_name;
+  localStorage.setItem('settings',JSON.stringify(state.settings));
+  renderDashboard();
+  showToast('Settings saved!');
+}
+
+function showLogoPreview(url){
+  document.getElementById('logoPreview').innerHTML=`<img src="${url}" alt="Logo">`;
+  document.getElementById('sbLogoWrap').innerHTML=`<img src="${url}" alt="Logo" style="width:100%;height:100%;object-fit:contain;padding:2px">`;
+}
+
+function uploadLogo(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    state.settings.logo_url=e.target.result;
+    localStorage.setItem('settings',JSON.stringify(state.settings));
+    showLogoPreview(e.target.result);
+    document.getElementById('deleteLogoBtn').style.display='inline-flex';
+    showToast('Logo updated!');
+  };
+  reader.readAsDataURL(file);
+}
+
+function deleteLogo(){
+  state.settings.logo_url='';
+  localStorage.setItem('settings',JSON.stringify(state.settings));
+  document.getElementById('logoPreview').innerHTML=`<div class="logo-placeholder"><i class="ti ti-photo-up"></i><span>No logo uploaded</span></div>`;
+  document.getElementById('sbLogoWrap').innerHTML=`<i class="ti ti-shield-check"></i>`;
+  document.getElementById('deleteLogoBtn').style.display='none';
+  showToast('Logo removed!');
+}
+
+function exportCSV(key){
+  const data=state[key]||[];if(!data.length){showToast('No data to export');return;}
+  const keys=Object.keys(data[0]);
+  const csv=[keys.join(','),...data.map(r=>keys.map(k=>`"${(r[k]||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`${key}-${new Date().toISOString().split('T')[0]}.csv`;a.click();showToast('CSV exported!');
+}
+
+function updateHotBadge(){const n=(state.hotleads||[]).length;const b=document.getElementById('hotBadge');b.style.display=n>0?'flex':'none';b.textContent=n;}
+
+function showToast(msg){document.getElementById('toastMsg').textContent=msg;const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+async function loadFromSupabase(){
+  if(!sb)return;
+  try{
+    const[b,l,h,a,c,cold]=await Promise.all([
+      sb.from('barbour_leads').select('*').order('created_at',{ascending:false}),
+      sb.from('linkedin_leads').select('*').order('created_at',{ascending:false}),
+      sb.from('hot_leads').select('*').order('created_at',{ascending:false}),
+      sb.from('appointments').select('*').order('created_at',{ascending:false}),
+      sb.from('existing_clients').select('*').order('created_at',{ascending:false}),
+      sb.from('cold_leads').select('*').order('created_at',{ascending:false})
+    ]);
+    if(b.data)state.barbour=b.data;
+    if(l.data)state.linkedin=l.data;
+    if(h.data)state.hotleads=h.data;
+    if(a.data)state.appointments=a.data;
+    if(c.data)state.clients=c.data;
+    if(cold.data)state.coldleads=cold.data;
+    const{data:sd}=await sb.from('settings').select('*').limit(1).single();
+    if(sd)state.settings={...state.settings,...sd};
+    renderPage(currentPage);renderDashboard();updateHotBadge();
+    showToast('Connected to Supabase!');
+  }catch(e){console.log('Supabase:',e);}
+}
+
+function init(){
+  const saved=localStorage.getItem('settings');
+  if(saved){try{state.settings={...state.settings,...JSON.parse(saved)};}catch(e){}}
+  if(state.settings.logo_url){
+    showLogoPreview(state.settings.logo_url);
+    document.getElementById('sbLogoWrap').innerHTML=`<img src="${state.settings.logo_url}" alt="Logo" style="width:100%;height:100%;object-fit:contain;padding:2px">`;
+  }
+  document.getElementById('sbName').textContent=state.settings.business_name;
+  if(sb)loadFromSupabase();
+  else{renderDashboard();updateTopbar('dashboard');}
+}
+init();
+</script>
+</body>
+</html>
