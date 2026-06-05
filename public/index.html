@@ -431,6 +431,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(el=>el.addEventListene
 
 function navigateTo(page){
   currentPage=page;
+  localStorage.setItem('currentPage',page);
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
