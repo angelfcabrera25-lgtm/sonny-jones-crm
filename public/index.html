@@ -682,7 +682,15 @@ async function markLost(id){
   if(sb){await sb.from('appointments').update({stage:'lost'}).eq('id',id);await sb.from('cold_leads').insert(cold);}
   showToast('Moved to Cold Leads');renderPage(currentPage);
 }
-
+async function moveBackToPipeline(key,id){
+  const lead=state[key]?.find(d=>d.id==id);if(!lead)return;
+  const target=lead.origin_table||'barbour';
+  const tbl=CFG[target]?.table||'barbour_leads';
+  state[target]=state[target]||[];state[target].push(lead);
+  state[key]=state[key].filter(d=>d.id!=id);
+  if(sb){await sb.from(tbl).insert(lead);await sb.from('hot_leads').delete().eq('id',id);}
+  showToast('Moved back to pipeline!');updateHotBadge();renderPage(currentPage);
+}
 // ── DELETE ──
 let pendingDel=null;
 function confirmDelete(key,id){
