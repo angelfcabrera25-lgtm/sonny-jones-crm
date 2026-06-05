@@ -843,7 +843,8 @@ async function loadFromSupabase(){
     if(cold.data)state.coldleads=cold.data;
     const{data:sd}=await sb.from('settings').select('*').limit(1).single();
     if(sd)state.settings={...state.settings,...sd};
-    renderPage(currentPage);renderDashboard();updateHotBadge();
+    const pg=localStorage.getItem('currentPage')||'dashboard';
+    navigateTo(pg);renderDashboard();updateHotBadge();
     showToast('Welcome Back!');
   }catch(e){console.log('Supabase:',e);}
 }
