@@ -461,9 +461,11 @@ function renderPage(page){
 
 function renderKanbanOrList(page){
   const mode=viewMode[page]||'kanban';
-  const kEl=document.getElementById(page+'Kanban');
-  const lEl=document.getElementById(page+'List');
-  const bEl=document.getElementById(page+'ListBody');
+  const idMap={hotleads:'hot',appointments:'appt',clients:'clients',barbour:'barbour',linkedin:'linkedin'};
+  const pid=idMap[page]||page;
+  const kEl=document.getElementById(pid+'Kanban');
+  const lEl=document.getElementById(pid+'List');
+  const bEl=document.getElementById(pid+'ListBody');
   if(mode==='kanban'){kEl.style.display='flex';if(lEl)lEl.style.display='none';renderKanban(page,kEl);}
   else{kEl.style.display='none';if(lEl)lEl.style.display='block';renderList(page,bEl);}
 }
