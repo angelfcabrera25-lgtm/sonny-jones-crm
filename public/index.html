@@ -470,7 +470,7 @@ function renderKanbanOrList(page){
   if(mode==='kanban'){kEl.style.display='flex';if(lEl)lEl.style.display='none';renderKanban(page,kEl);}
   else{kEl.style.display='none';if(lEl)lEl.style.display='block';renderList(page,bEl);}
 }
-
+let searchQuery={};
 let dragItem=null,dragDataKey=null,dragId=null;
 
 function renderKanban(page,container){
