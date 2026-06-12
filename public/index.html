@@ -417,7 +417,7 @@ try{sb=supabase.createClient(SB_URL,SB_KEY);}catch(e){}
 
 const CFG={
   barbour:{stages:['to_contact','contacted','follow_up_1','follow_up_2','follow_up_3','replied','call_booked','cold'],labels:{to_contact:'To Contact',contacted:'Contacted',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',follow_up_3:'Follow Up 3',replied:'Replied',call_booked:'Call Booked',cold:'Cold'},table:'barbour_leads'},
-  linkedin:{stages:['COLUMN1','connection_sent','connected','dm_sent','follow_up_1','follow_up_2','replied','call_booked','cold'],labels:{to_connect:'To Connect',connection_sent:'Connection Sent',connected:'Connected',dm_sent:'DM Sent',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',replied:'Replied',call_booked:'Call Booked',cold:'Cold'},table:'linkedin_leads'},
+  linkedin:{stages:['connection_sent','connected','dm_sent','follow_up_1','follow_up_2','replied','call_booked','cold'],labels:{to_connect:'To Connect',connection_sent:'Connection Sent',connected:'Connected',dm_sent:'DM Sent',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',replied:'Replied',call_booked:'Call Booked',cold:'Cold'},table:'linkedin_leads'},
   hotleads:{stages:['to_contact','contacted','follow_up_1','follow_up_2','replied','call_booked'],labels:{to_contact:'To Contact',contacted:'Contacted',follow_up_1:'Follow Up 1',follow_up_2:'Follow Up 2',replied:'Replied',call_booked:'Call Booked'},table:'hot_leads'},
   appointments:{stages:['booked','completed','won','lost'],labels:{booked:'Booked',completed:'Completed',won:'Won',lost:'Lost'},table:'appointments'},
   clients:{stages:['active','retainer','on_hold','completed','lapsed'],labels:{active:'Active',retainer:'Retainer',on_hold:'On Hold',completed:'Completed',lapsed:'Lapsed'},table:'existing_clients'}
