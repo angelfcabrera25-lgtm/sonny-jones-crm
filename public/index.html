@@ -1,3 +1,17 @@
+<script>
+const password = prompt("D2S CRM Maintenance - Enter Password");
+
+if (password !== "angel123") {
+  document.write(`
+    <div style="font-family:Arial;text-align:center;padding-top:100px">
+      <h1>D2S CRM Under Maintenance</h1>
+      <p>System upgrades and improvements are currently being implemented.</p>
+      <p>Please check back later.</p>
+    </div>
+  `);
+  throw new Error("Access denied");
+}
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
